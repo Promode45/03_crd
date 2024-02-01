@@ -16,6 +16,9 @@ The goals of this exercise are to:
 Here is where we load the packages we will use.  
 ```{r setup}
 #install.packages("broom")
+#install.packages("car")
+#install.packages("emmeans")
+#install.packages("multcomp")
 
 # Loading packages
 library(tidyverse) # for data wrangling and plotting
@@ -26,12 +29,12 @@ library(multcomp) # for pairwise comparison letter display
 ```
 
 ```{r data import}
-crd_df 
+crd_df <- read.csv("../Data/wheat_nk_balkh.csv")
 
-crd_df
+View(crd_df)
 ```
 
-# b) EDA tables  
+# b) EDA tables - exploratory data analysis
 ```{r summary}
 summary(crd_df)
 ```
@@ -41,8 +44,16 @@ glimpse(crd_df)
 ```
 
 # c) Wrangling  
+why blocks should be categorical and not numerical? 
+For anova, treatments must be categorical (vector) and not numerical. 
 ```{r crd_dfw}
-crd_dfw <- crd_df 
+crd_dfw <- crd_df |> 
+  mutate(rep = factor(rep),
+         nrate_kgha = factor(nrate_kgha),
+         krate_kgha = factor(krate_kgha)
+         ) |> 
+  mutate(trtname = paste0(nrate_kgha, "+" , krate_kgha)
+         )
 
 crd_dfw
 ```
@@ -58,7 +69,12 @@ Yield: from 2795 to 7445 kg/ha
 
 # d) EDA plots  
 ```{r n boxplot}
-
+crd_dfw |> 
+  ggplot(aes(nrate_kgha, yield_kgha, color = nrate_kgha)) +
+  geom_boxplot() +
+  geom_jitter() +
+  theme(legend.position = "none")
+  
 ```
 
 ```{r k boxplot}
