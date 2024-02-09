@@ -118,12 +118,27 @@ In this section, run the appropriate model.\
 Remember to set the contrast type to sum-to-zero (the default in R is set-to-zero, which is not what we want).
 
 Also, remember to specify all model terms needed for the treatment design.
+```{r}
+options(contrasts = c("contr.sum", "contr.poly"))
+
+crd_mod <- lm(yield_kgha ~ nrate_kgha + krate_kgha + nrate_kgha:krate_kgha,
+              data = crd_wrangled
+              )
+summary(crd_mod)
+
+
+```
 
 # f) ANOVA table
 
 Use this section to check the ANOVA table, ensuring you use type 3 sum-of-squares.
+```{r}
+Anova(crd_mod, type = 3)
+
+```
 
 ## Question 2) Based on the ANOVA table above, for which effect(s) in the ANOVA should you extract means and perform pair-wise comparisons? Explain why.
+Based on the ANOVA table, the interaction has a significant effect on the yield, and hence means must be extracted on this, and not on indivitual terms. 
 
 # g) Linear model assumptions
 
