@@ -42,8 +42,8 @@ library(multcompView)
 Now, import the data set `wheat_nk_bamyan.csv` in the chunk below.
 
 ```{r data import}
-crd_df <- read_csv("../Data/wheat_nk_bamyan.csv")
-(crd_df)
+df <- read_csv("../Data/wheat_nk_bamyan.csv")
+df
 
 
 ```
@@ -57,59 +57,66 @@ For that, a study was conducted using a completely randomized design as the expe
 Use this space to conduct exploratory data analysis of the imported data, in the form of tables.
 
 ```{r}
-summary(crd_df)
+summary(df)
 ```
 
 ```{r}
-glimpse(crd_df)
+glimpse(df)
 ```
 
 # c) Wrangling
 
-Here, make sure to wrangle your data set with all needed steps. Refer back to class code if you need a refresher on what was needed.
-As seen on the above table, all data are in dbl format. For better analysis, we need to convert rep, nrate and krate to factor, which will be done by the following chunk. 
+Here, make sure to wrangle your data set with all needed steps. Refer back to class code if you need a refresher on what was needed. As seen on the above table, all data are in dbl format. For better analysis, we need to convert rep, nrate and krate to factor, which will be done by the following chunk.
+
 ```{r}
-crd_wrangled <- crd_df %>% 
+wrangled <- df %>% 
   mutate(rep = factor(rep),
          nrate_kgha = factor(nrate_kgha),
          krate_kgha = factor(krate_kgha),
          trtname = paste0(nrate_kgha, "+", krate_kgha), .before = yield_kgha
          )
 
-crd_wrangled
+wrangled
 ```
+
 # d) EDA plots
 
 Now, explore the wrangled data using plots.\
 Make sure to explore plots showing the main effects and the interaction.
+
 ```{r}
-crd_wrangled %>% 
+wrangled %>% 
   ggplot(aes(nrate_kgha, yield_kgha))+
   geom_boxplot()
 ```
-Nothing too discernible in the figure, except for the fact that the yield seems to be increasing with increasing N rates. 
+
+Nothing too discernible in the figure, except for the fact that the yield seems to be increasing with increasing N rates.
+
 ```{r}
-crd_wrangled %>% 
+wrangled %>% 
   ggplot(aes(krate_kgha,yield_kgha))+
   geom_boxplot()
 ```
-Nothing too discernible in the figure, except for the fact that treatments with 20 KgK/ha have a wider dispersion from the mean, as seen by the height of the box, and the length of the wicks. 
+
+Nothing too discernible in the figure, except for the fact that treatments with 20 KgK/ha have a wider dispersion from the mean, as seen by the height of the box, and the length of the wicks.
+
 ```{r}
-crd_wrangled %>% 
+wrangled %>% 
   ggplot(aes(nrate_kgha,yield_kgha))+
   geom_boxplot()+
   facet_grid(.~krate_kgha)
 ```
-The first two grids i.e treatments with 0,30 kg of K, have a linear increase in their mean yield, but the third grid with K treatment of 60 kg/ha, there is a strong jump in yield values with N treatment of 100 kg/ha almost in par with the 200 N kg/ha treatment. 
+
+The first two grids i.e treatments with 0,30 kg of K, have a linear increase in their mean yield with increasing N rates, but the third grid with K treatment of 60 kg/ha, there is a strong jump in yield values with N treatment of 100 kg/ha almost in par with the 200 N kg/ha treatment, implying some interaction effects. 
 
 ```{r}
-crd_wrangled %>% 
+wrangled %>% 
   ggplot(aes(krate_kgha,yield_kgha))+
   geom_boxplot()+
   facet_grid(.~nrate_kgha)
 ```
-There seems to be no interaction effects in N rates of 0 and 100, but we can see some effects when N rate is 200. The yield values for the treatment with 200kg of N and 30kg of K has a higher yield than similar K treatements but with different N rates. 
-The first two grids follow an increasing pattern as K rate increases, which is absent in the third grid signifying interaction effects. 
+
+There seems to be no interaction effects in N rates of 0 and 100, but we can see some effects when N rate is 200. The yield values for the treatment with 200kg of N and 30kg of K has a higher yield than similar K treatements but with different N rates. The first two grids follow an increasing pattern as K rate increases, which is absent in the third grid signifying interaction effects. 
 ## Question 1) Below each plot of this section, write a sentence explaining your visual interpretation of the plot.
 
 # e) Statistical model
@@ -118,13 +125,14 @@ In this section, run the appropriate model.\
 Remember to set the contrast type to sum-to-zero (the default in R is set-to-zero, which is not what we want).
 
 Also, remember to specify all model terms needed for the treatment design.
+
 ```{r}
 options(contrasts = c("contr.sum", "contr.poly"))
 
-crd_mod <- lm(yield_kgha ~ nrate_kgha + krate_kgha + nrate_kgha:krate_kgha,
-              data = crd_wrangled
+mod <- lm(yield_kgha ~ nrate_kgha + krate_kgha + nrate_kgha:krate_kgha,
+              data = wrangled
               )
-summary(crd_mod)
+summary(mod)
 
 
 ```
@@ -132,13 +140,15 @@ summary(crd_mod)
 # f) ANOVA table
 
 Use this section to check the ANOVA table, ensuring you use type 3 sum-of-squares.
+
 ```{r}
-Anova(crd_mod, type = 3)
+Anova(mod, type = 3)
 
 ```
 
 ## Question 2) Based on the ANOVA table above, for which effect(s) in the ANOVA should you extract means and perform pair-wise comparisons? Explain why.
-Based on the ANOVA table, the interaction has a significant effect on the yield, and hence means must be extracted on this, and not on indivitual terms. 
+
+Based on the ANOVA table, there is no significant interaction effects and hence we proceed to testing the effects of indivitual treatments which are both significant. 
 
 # g) Linear model assumptions
 
@@ -146,15 +156,143 @@ Use this section to first compute your residuals, including studentdized residua
 
 ## Question 3) What are the linear model assumptions that we need to check for? Create subsections (using ##) below for each of these assumptions, and write code to produce plots to check for these assumptions. For each assumption, write down your interpretation of the produced plots, and your thoughts if the assumptions hold or not.
 
+## Extracting residuals
+
+```{r}
+resid <- augment(mod) %>% 
+  mutate(.studresid = rstudent(mod))
+resid
+
+
+```
+
+The columns ".std.resid" and ".studresid" are the studentized residuals. The two are the same but calculated by different packages (slightly different methods).
+
+## Model assumption 1 - Residual independence
+
+```{r}
+resid %>% 
+  ggplot(aes(.fitted,.studresid))+
+  geom_point()+
+  geom_smooth()
+
+
+```
+
+There does not seem to be any definite pattern in the residuals, satisfying the first model assumption of residual independennce.
+
+## Model assumption 2 - Residual homoscedascity
+
+Homoscedascity is when we observe an increase in the value of residuals as we move along a gradient. A fan shaped smooth curve indicates heteroscedascity, which is not what we want to see. This assumption can be tested using a similar graph as above.
+
+```{r}
+resid %>% 
+  ggplot(aes(.fitted, .studresid))+
+  geom_point()+
+  geom_smooth()
+
+
+```
+
+We see no fan shaped curve, therefore satisfying the model assumption of homescedascity.
+
+## Model assumption 3 - Residual normality
+
+We expect to see a normal distribution of the residuals centered around 0. Quantile - quantile plot will help us check this assumption
+
+```{r}
+resid %>% 
+  ggplot(aes(sample = .studresid))+
+  stat_qq()+
+  stat_qq_line()
+
+
+
+```
+```{r}
+resid %>% 
+  ggplot(aes(.studresid))+
+  geom_density()+
+  scale_x_continuous(limits = c(-3,3), breaks = c(-3:3))
+
+```
+From the above two graphs, we can say that the residuals are normally distributed around mean 0. 
+
+## Model assumption 4 - Residual outliers 
+Residuals as far as possible should stay within the limits of +- 3 standard deviations from the mean. A fitted vs residuals curve will help us interpret for any outliers. 
+```{r}
+resid %>% 
+  ggplot(aes(.fitted , .studresid))+
+  geom_point()+
+  geom_smooth()+
+  geom_hline(yintercept = c(-3,3), color = "red")
+
+
+```
+None of the residuals are beyond the threshold of 3 SDs, and hence this model assumption is proved. Now that all assumptions have been proved, we can move ahead to using the model for inference. 
+
 # h) Model means
 
 Use this section to extract model means according to your decision of the ANOVA table effects.
+From the anova table, we have seen that interaction effects have been significant, and we will extract means for this. 
+```{r}
+means <- emmeans(mod, 
+                ~nrate_kgha * krate_kgha)
+means
+```
+```{r}
+means_n <- emmeans(mod, ~ nrate_kgha)
+means_n
 
+```
+```{r}
+means_k <- emmeans(mod, ~krate_kgha)
+means_k
+
+
+```
 # i) Pairwise comparisons
 
 Use this section to perform pair-wise comparison of the means extracted above.
 
 Make sure to reverse the order from high to low, use letters instead of numbers, and no adjustment.
+```{r}
+cld_all <- cld(means, 
+                reversed = T,
+                Letters = letters,
+                adjust = "none")
+cld_all
+```
+```{r}
+cld_n <- cld(means_n,
+              reversed = T,
+                   Letters = letters,
+                   adjust = "none")
+cld_n
+```
+```{r}
+cld_k <- cld(means_k,
+              reversed = T,
+                   Letters = letters,
+                   adjust = "none")
+cld_k
+```
+```{r - conversion to a df}
+cld_n_converted <- cld_n %>% 
+  as.data.frame() %>% 
+  mutate(letter = trimws(.group)) 
+cld_n_converted
+  
+
+```
+```{r - conversion to a df2}
+cld_k_converted <- cld_k %>% 
+  as.data.frame() %>% 
+  mutate(letter = trimws(.group))
+cld_k_converted
+```
+
+
 
 # g) Final plot(s)
 
@@ -168,6 +306,33 @@ In class, we did not have time to make it publication-ready (e.g., a plot lookin
 Here, make sure you deliver final plot(s) that is/are publication ready.
 
 Make sure to provide an interpretation for the plot(s) created, including which treatment levels were significantly higher/lower.
+
+```{r}
+ggplot() +
+  geom_boxplot(data = wrangled,
+               aes(nrate_kgha, yield_kgha, fill = nrate_kgha)
+               ) +
+  geom_label(data = cld_n_converted,
+             aes(nrate_kgha, emmean, label = letter)
+             )+
+  theme(legend.position = "none",
+        )+
+  scale_fill_viridis_d()
+
+```
+```{r}
+ggplot()+
+  geom_boxplot(data = wrangled, 
+               aes(krate_kgha, yield_kgha, fill = krate_kgha)
+               )+
+  geom_label(data = cld_k_converted,
+             aes(krate_kgha, emmean, label = letter)
+             )+
+  scale_fill_viridis_d()+
+  theme(legend.position = "none")
+
+
+```
 
 # Submitting your work
 
