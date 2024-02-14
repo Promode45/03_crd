@@ -42,8 +42,7 @@ library(multcompView)
 Now, import the data set `wheat_nk_bamyan.csv` in the chunk below.
 
 ```{r data import}
-df <- read_csv("../Data/wheat_nk_bamyan.csv")
-df
+df <- read.csv("../Data/wheat_nk_bamyan.csv")
 
 
 ```
@@ -76,7 +75,7 @@ wrangled <- df %>%
          trtname = paste0(nrate_kgha, "+", krate_kgha), .before = yield_kgha
          )
 
-wrangled
+glimpse(wrangled)
 ```
 
 # d) EDA plots
@@ -87,7 +86,8 @@ Make sure to explore plots showing the main effects and the interaction.
 ```{r}
 wrangled %>% 
   ggplot(aes(nrate_kgha, yield_kgha))+
-  geom_boxplot()
+  geom_boxplot()+
+  geom_jitter(aes(color = nrate_kgha))
 ```
 
 Nothing too discernible in the figure, except for the fact that the yield seems to be increasing with increasing N rates.
@@ -95,15 +95,18 @@ Nothing too discernible in the figure, except for the fact that the yield seems 
 ```{r}
 wrangled %>% 
   ggplot(aes(krate_kgha,yield_kgha))+
-  geom_boxplot()
+  geom_boxplot()+
+  geom_jitter(aes(color = krate_kgha))
 ```
 
 Nothing too discernible in the figure, except for the fact that treatments with 20 KgK/ha have a wider dispersion from the mean, as seen by the height of the box, and the length of the wicks.
 
 ```{r}
 wrangled %>% 
-  ggplot(aes(nrate_kgha,yield_kgha))+
+  ggplot(aes(nrate_kgha,yield_kgha,
+             color = nrate_kgha))+
   geom_boxplot()+
+  geom_jitter()+
   facet_grid(.~krate_kgha)
 ```
 
@@ -111,12 +114,15 @@ The first two grids i.e treatments with 0,30 kg of K, have a linear increase in 
 
 ```{r}
 wrangled %>% 
-  ggplot(aes(krate_kgha,yield_kgha))+
+  ggplot(aes(krate_kgha,yield_kgha,
+             color = krate_kgha))+
   geom_boxplot()+
+  geom_jitter()+
   facet_grid(.~nrate_kgha)
 ```
 
 There seems to be no interaction effects in N rates of 0 and 100, but we can see some effects when N rate is 200. The yield values for the treatment with 200kg of N and 30kg of K has a higher yield than similar K treatements but with different N rates. The first two grids follow an increasing pattern as K rate increases, which is absent in the third grid signifying interaction effects. 
+
 ## Question 1) Below each plot of this section, write a sentence explaining your visual interpretation of the plot.
 
 # e) Statistical model
@@ -148,7 +154,7 @@ Anova(mod, type = 3)
 
 ## Question 2) Based on the ANOVA table above, for which effect(s) in the ANOVA should you extract means and perform pair-wise comparisons? Explain why.
 
-Based on the ANOVA table, there is no significant interaction effects and hence we proceed to testing the effects of indivitual treatments which are both significant. 
+Based on the ANOVA table, there is no significant interaction effects and hence we proceed to testing the effects of individual treatments which are both significant. 
 
 # g) Linear model assumptions
 
@@ -234,12 +240,18 @@ None of the residuals are beyond the threshold of 3 SDs, and hence this model as
 # h) Model means
 
 Use this section to extract model means according to your decision of the ANOVA table effects.
-From the anova table, we have seen that interaction effects have been significant, and we will extract means for this. 
+
+
+From the anova table, we have seen that interaction effects have not been significant, but we will extract means for this. 
 ```{r}
-means <- emmeans(mod, 
+means_all <- emmeans(mod, 
                 ~nrate_kgha * krate_kgha)
-means
+means_all
 ```
+This was not really needed because we did not find any interaction in the anova table. 
+
+
+The following chunk calculates the mean only for N rate. 
 ```{r}
 means_n <- emmeans(mod, ~ nrate_kgha)
 means_n
@@ -256,25 +268,19 @@ means_k
 Use this section to perform pair-wise comparison of the means extracted above.
 
 Make sure to reverse the order from high to low, use letters instead of numbers, and no adjustment.
-```{r}
-cld_all <- cld(means, 
-                reversed = T,
-                Letters = letters,
-                adjust = "none")
-cld_all
-```
+
 ```{r}
 cld_n <- cld(means_n,
               reversed = T,
-                   Letters = letters,
-                   adjust = "none")
+              Letters = letters,
+              adjust = "none")
 cld_n
 ```
 ```{r}
 cld_k <- cld(means_k,
               reversed = T,
-                   Letters = letters,
-                   adjust = "none")
+              Letters = letters,
+              adjust = "none")
 cld_k
 ```
 ```{r - conversion to a df}
@@ -308,31 +314,57 @@ Here, make sure you deliver final plot(s) that is/are publication ready.
 Make sure to provide an interpretation for the plot(s) created, including which treatment levels were significantly higher/lower.
 
 ```{r}
-ggplot() +
+ggplot(mapping = aes(fill = nrate_kgha)) +
   geom_boxplot(data = wrangled,
-               aes(nrate_kgha, yield_kgha, fill = nrate_kgha)
+               aes(nrate_kgha, yield_kgha, fill = nrate_kgha),
+               alpha = 0.6
                ) +
+  geom_jitter(data = wrangled,
+              aes(nrate_kgha, yield_kgha),
+              shape = 21,
+              alpha = 0.6,
+              size = 3)+
   geom_label(data = cld_n_converted,
-             aes(nrate_kgha, emmean, label = letter)
+             aes(nrate_kgha, emmean, label = letter),
+             fill = "white"
              )+
-  theme(legend.position = "none",
-        )+
+  labs(x = "N rate (kg/ha)",
+       y = "Yield (kg/ha)")+
+  theme_classic()+
+  theme(legend.position = "none")+
   scale_fill_viridis_d()
 
 ```
+From the above graph, we can say that N rate of 0 kg/ha had significantly lower yield. Although the treatments of 100 and 200 kg/ha have slightly different yield values(visually), they are not statistically different. 
+
+
 ```{r}
-ggplot()+
+ggplot(mapping = aes(fill = krate_kgha))+
   geom_boxplot(data = wrangled, 
-               aes(krate_kgha, yield_kgha, fill = krate_kgha)
+               aes(krate_kgha, yield_kgha, fill = krate_kgha),
+               alpha = 0.6
                )+
+  geom_jitter(data = wrangled,
+              aes(krate_kgha, yield_kgha),
+              shape = 21,
+              alpha = 0.6,
+              size = 3)+
   geom_label(data = cld_k_converted,
-             aes(krate_kgha, emmean, label = letter)
+             aes(krate_kgha, emmean, label = letter),
+             fill = "white"
              )+
+  labs(x = "K rate (kg/ha)",
+       y = "Yield (kg/ha)")+
   scale_fill_viridis_d()+
+  theme_classic()+
   theme(legend.position = "none")
 
 
+
 ```
+K rate of 0 kg/ha has a significantly lower yield as compared to the other two treatments. 
+
+
 
 # Submitting your work
 
